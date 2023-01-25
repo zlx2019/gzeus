@@ -31,11 +31,6 @@ func (s *Session) Run() {
 
 // Read 读取客户端连接的数据
 func (s *Session) Read() {
-	// 设置读取超时时间
-	err := s.conn.SetReadDeadline(time.Now().Add(time.Second))
-	if err != nil {
-		fmt.Println(err)
-	}
 	for {
 		// 解包读取客户端数据
 		message, err := s.packer.UnPack(s.conn)
@@ -44,17 +39,12 @@ func (s *Session) Read() {
 		}
 		fmt.Printf("Server Read Message : [ID:%d Data:%s]\n", message.Id, string(message.Data))
 		// TODO 收到连接数据后,模拟写回数据
-		s.chWrite <- &Message{Id: 10001, Data: []byte("Hi Zero!")}
+		s.chWrite <- &Message{Id: 30001, Data: []byte("Hi Zero!")}
 	}
 }
 
 // Write 写回数据到客户端连接中
 func (s *Session) Write() {
-	// 设置写入超时时间
-	err := s.conn.SetWriteDeadline(time.Now().Add(time.Second))
-	if err != nil {
-		fmt.Println(err)
-	}
 	for {
 		select {
 		// 数据写回客户端事件
@@ -66,6 +56,11 @@ func (s *Session) Write() {
 
 // 将数据响应到客户端连接
 func (s *Session) send(message *Message) {
+	// 设置响应数据超时时间
+	err := s.conn.SetWriteDeadline(time.Now().Add(time.Second))
+	if err != nil {
+		fmt.Println(err)
+	}
 	bytes, err := s.packer.Pack(message)
 	if err != nil {
 		return

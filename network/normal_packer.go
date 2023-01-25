@@ -40,8 +40,9 @@ func (np *NormalPacker) Pack(message *Message) ([]byte, error) {
 // UnPack 解数据包
 // 将客户端传来的数据进行解包
 func (np *NormalPacker) UnPack(reader io.Reader) (*Message, error) {
-	// 断言一下,并且设置超时时间为1秒
-	err := reader.(*net.TCPConn).SetReadDeadline(time.Now().Add(time.Second))
+	// 断言一下tcp连接
+	// 并且设置读取数据超时时间
+	err := reader.(*net.TCPConn).SetReadDeadline(time.Now().Add(2 * time.Second))
 	if err != nil {
 		return nil, err
 	}
