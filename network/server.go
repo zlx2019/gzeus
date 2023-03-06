@@ -1,56 +1,52 @@
 package network
 
 import (
-	"fmt"
 	"net"
 )
 
 // Server 通信服务器
 type Server struct {
 	// 客户端连接监听器
-	listener net.Listener
-	// 服务器地址
-	address string
-	// 通信协议
-	network string
+	tcpListener net.Listener
+	// 解包函数
+	OnSessionPacket func(packet *SessionPacket)
 }
 
-// NewServer 根据配置创建Server
-func NewServer(address, network string) *Server {
-	return &Server{
-		listener: nil,
-		network:  network,
-		address:  address,
+// NewServer 根据地址,创建一个Server服务器
+func NewServer(address string) *Server {
+	// 创建一个tcp的地址指针
+	resolveTCPAddr, err := net.ResolveTCPAddr("tcp6", address)
+	if err != nil {
+		panic(err)
 	}
+	// 建立tcp连接
+	tcpListener, err := net.ListenTCP("tcp6", resolveTCPAddr)
+	if err != nil {
+		panic(err)
+	}
+	// 将建立好的tcp连接,设置到服务中
+	s := &Server{tcpListener: tcpListener}
+	return s
 }
 
-// Run 服务器运行
-func (s *Server) Run() {
-	// 创建tcp的addr
-	tcpAddr, err := net.ResolveTCPAddr(s.network, s.address)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	// 启动tcp监听器
-	tcpListener, err := net.ListenTCP(s.network, tcpAddr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	s.listener = tcpListener
-
+// Run 运行服务器
+func (server *Server) Run() {
 	for {
-		// 接受来自于客户端的TCP连接
-		conn, err := s.listener.Accept()
+		// 阻塞,等待客户端连接
+		clientConn, err := server.tcpListener.Accept()
 		if err != nil {
-			continue
+			if _, ok := err.(net.Error); ok {
+				continue
+			}
 		}
-		// 启用协程处理连接
+		// 开启一个协程,处理客户端连接
 		go func() {
-			// 为每个连接创建一个Session,进行读写处理
-			session := NewSession(conn)
+			// 将连接包装成一个会话
+			session := NewSession(clientConn)
+			SessionMgrInstance.AddSession(session)
+			// 运行会话
 			session.Run()
+			SessionMgrInstance.DelSession(session.UId)
 		}()
 	}
 }

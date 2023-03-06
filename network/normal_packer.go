@@ -30,7 +30,7 @@ func (np *NormalPacker) Pack(message *Message) ([]byte, error) {
 	np.Order.PutUint64(buf[:8], uint64(len(buf)))
 
 	// 设置包的8-16索引位置,为数据的ID
-	np.Order.PutUint64(buf[8:16], message.Id)
+	np.Order.PutUint64(buf[8:16], message.ID)
 
 	// 将要传输的数据拷贝到包的后面空余位置
 	copy(buf[16:], message.Data)

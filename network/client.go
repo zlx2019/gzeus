@@ -7,15 +7,23 @@ import (
 	"time"
 )
 
-// Client 模拟游戏客户端
+// Client 游戏客户端
 type Client struct {
 	Address string
-	packer  NormalPacker
+	packer  IPacker
+	// 客户端用来接收消息的通道
+	ChMsg chan *Message
+	// 根据一个MessageId,执行不同的handler
+	OnMessage func(packet *ClientPacket)
 }
 
 // NewClient 客户端创建
 func NewClient(address string) *Client {
-	return &Client{address, NormalPacker{Order: binary.BigEndian}}
+	return &Client{
+		Address: address,
+		packer:  &NormalPacker{Order: binary.BigEndian},
+		ChMsg:   make(chan *Message, 1),
+	}
 }
 
 func (c *Client) Run() {
@@ -37,11 +45,16 @@ func (c *Client) Write(conn net.Conn) {
 	ticker := time.NewTicker(time.Second * 1)
 	for {
 		select {
+		// 每秒执行一次
 		case <-ticker.C:
-			c.send(conn, &Message{
-				Id:   10001,
+			// 将自定义消息发送到 客户端通道
+			c.ChMsg <- &Message{
+				ID:   10001,
 				Data: []byte("Hello"),
-			})
+			}
+		// 发送消息到服务端
+		case msg := <-c.ChMsg:
+			c.send(conn, msg)
 		}
 	}
 }
@@ -54,7 +67,7 @@ func (c *Client) send(conn net.Conn, message *Message) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("Client Send: [ID:%d  message:%s]\n", message.Id, string(message.Data))
+	fmt.Printf("Client Send: [ID:%d  message:%s]\n", message.ID, string(message.Data))
 	bytes, err := c.packer.Pack(message)
 	if err != nil {
 		fmt.Println(err)
@@ -75,6 +88,11 @@ func (c *Client) Read(conn net.Conn) {
 			fmt.Println(err)
 			continue
 		}
-		fmt.Printf("Server Response: [ID:%d  message:%s]\n", message.Id, string(message.Data))
+		// 设置解包
+		c.OnMessage(&ClientPacket{
+			Msg:  message,
+			Conn: conn,
+		})
+		fmt.Printf("Server Response: [ID:%d  message:%s]\n", message.ID, string(message.Data))
 	}
 }

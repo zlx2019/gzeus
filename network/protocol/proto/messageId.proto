@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package messageId;
+
+option go_package = "/messageId";
+
+// 方法Key标识
+// 不同的枚举表示执行不同的方法
+enum MessageId{
+  None = 0;
+
+  //Login相关
+  LoginReq=50001;
+  LoginResp=50002;
+
+  //player功能标识
+  // 添加好友
+  AddFriendReq=100001;
+  AddFriendResp=100002;
+  // 删除好友
+  DelFriendReq=100003;
+  DelFriendResp=100004;
+  // 发送消息
+  SendChatMsgReq=100005;
+  SendChatMsgResp=100006;
+}
